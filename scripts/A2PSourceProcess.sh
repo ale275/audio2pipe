@@ -150,7 +150,7 @@ if [[ "${_mode}" == "PRE" ]]; then
     fi 
 
     # Remove audio pipe leftovers
-    if [[ ! -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
+    if [[ -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
         rm "${_owntoneLibPath}/${_audioPipeName}"
     fi
 
@@ -199,5 +199,10 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
     fi    
 
     echo "" > "${_pidDir}/${_pidName}"
+
+    echo "Removing audio pipe"
+    if [[ -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
+        rm "${_owntoneLibPath}/${_audioPipeName}"
+    fi
 
 fi
