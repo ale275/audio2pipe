@@ -12,7 +12,12 @@ def owntone_get_outputs(setids = False, checkSelection = False, debug = False):
     ownToneOutSelected = None
 
     print("Getting OwnTone output(s)")
-    ownToneOutReq = requests.get("http://" + ownToneServer + ownToneApiOutGet)
+    try:
+        ownToneOutReq = requests.get("http://" + ownToneServer + ownToneApiOutGet)
+    except requests.exceptions.RequestException as e:
+        eprint("Failed OwnTone output(s) retrieval")
+        eprint(str(e))
+        exit(200)
 
     if debug:
         print("Status code")
@@ -52,7 +57,12 @@ def owntone_set_outputs(ownToneOutputs, debug = False):
     if debug:
         print(ownToneOutputs)
 
-    ownToneOutReq = requests.put("http://" + ownToneServer + ownToneApiOutSet, data = json.dumps(ownToneOutputs))
+    try:
+        ownToneOutReq = requests.put("http://" + ownToneServer + ownToneApiOutSet, data = json.dumps(ownToneOutputs))
+    except requests.exceptions.RequestException as e:
+        eprint("Failed OwnTone output(s) set")
+        eprint(str(e))
+        exit(220)
 
     if ownToneOutReq.status_code != 204:
         print("Failed OwnTone output(s) set")
