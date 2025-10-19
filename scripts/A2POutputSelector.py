@@ -33,7 +33,7 @@ def owntone_get_outputs(setids = False, checkSelection = False, debug = False):
             if setids == True:
                 ownToneOutSetStruct['outputs'].append(ownToneOutDetails['id'])
             if checkSelection:
-                # at startup ownToneOutSelected is set to None, if ownToneOutSelected will evaulate false
+                # at startup ownToneOutSelected is set to None, if ownToneOutSelected will evaluate false
                 if ownToneOutSelected:
                     ownToneOutSelected = ownToneOutSelected and ownToneOutDetails['selected']
                 else:
@@ -101,10 +101,10 @@ owntone_get_outputs(setids = True, debug = scriptDebug)
 
 # * check if at least on on the requested output was found
 if len(ownToneOutSetStruct['outputs']) == 0:
-    eprint("No output found on OwnTone matching the selected criterias")
+    eprint("No output found on OwnTone matching the selected criteria")
     exit(210)
 
-# * check if less output than expeted were found
+# * check if less output than expected were found
 if len(ownToneOutSetStruct['outputs']) != len(userOutList):
     print("WARN Not all the requested output(s) could be found on OwnTone")
 
