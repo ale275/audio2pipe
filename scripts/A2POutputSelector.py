@@ -66,6 +66,7 @@ def owntone_set_outputs(ownToneOutputs, debug = False):
         print(ownToneOutReq)
 
 # OwnTone API
+ownToneApiConfig = '/api/config'
 ownToneApiOutGet = '/api/outputs'
 ownToneApiOutSet = '/api/outputs/set'
 
@@ -95,6 +96,19 @@ userOutList = userOutString.split(',')
 userOutList = sorted(set(userOutList))
 # * remove leading and trailing spaces, tabs and new line introduced by mistake in userOutList 
 userOutList = [userOut.strip(" \n\t") for userOut in userOutList]
+
+# Check OwnTone server availability
+print("Checking OwnTone availability")
+try:
+    ownToneConfigReq = requests.get("http://" + ownToneServer + ownToneApiConfig)
+except requests.exceptions.RequestException as e:
+    eprint("Failed OwnTone availability test")
+    eprint(str(e))
+    exit(110)
+
+if scriptDebug:
+    print("Status code")
+    print(ownToneConfigReq.status_code)
 
 # Retrieve output from OwnTone
 owntone_get_outputs(setids = True, debug = scriptDebug)
