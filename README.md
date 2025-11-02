@@ -28,6 +28,13 @@ Existence of all dependencies and daemon base dir configuration will be also don
   - Detect pipe: *var/pipes/A2PDETECT_<A2P_DEVNAME>.pipe*
   - Audio pipe: *<A2P_OT_LIB>/<A2P_DEVNAME>*
   - systemd service file: *cpiped_<A2P_DEVNAME>.service*
+- **A2P_DEVFORMAT** *(Not recommended)*: Concatenation of sample format and sample frequency separated by two underscores  
+  Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000  
+  Default sample rate *41000Hz*  
+  Default sample size *16bit*  
+  Default capture channel *2*  
+  **Preferred** approach is to read cpiped env variables CPIPED_SR, CPIPED_SS, CPIPED_CC, respectively for sample rate, sample size and capture channel directly
+- **A2P_CP_SF:** audio sample rate to be passed to cpiped in *hz*. Default *41000*
 - **A2P_CP_SOUNDCARD:** audio input soundcard to be passed to cpiped in *hw:\<card>,\<device>* format
 - **A2P_CP_SL:** cpiped silence level
 - **A2P_OT_LIB:** OwnTone library folder. Where the audio pipe will be created and filled on sound detection
@@ -38,7 +45,7 @@ Existence of all dependencies and daemon base dir configuration will be also don
 ## Dependencies
 - Bash
 - Python
-- [CPiped](https://github.com/b-fitzpatrick/cpiped)
+- [CPiped ale275 fork](https://github.com/ale275/cpiped)
 
 ## ToDo(s)
 - [ ] Move ENV variable setup from Service file to EnvironFile to define monitoring pipe in pre stage
@@ -54,3 +61,5 @@ Existence of all dependencies and daemon base dir configuration will be also don
 Based on [Making an Analog In to Airplay RPi-Transmitter](https://github.com/owntone/owntone-server/wiki/Making-an-Analog-In-to-Airplay-RPi-Transmitter) from ownTone wiki
 
 Created to be used with [OwnTone](https://owntone.github.io/owntone-server/)
+
+[CPiped original](https://github.com/b-fitzpatrick/cpiped)

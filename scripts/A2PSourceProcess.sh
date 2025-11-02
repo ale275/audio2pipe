@@ -7,14 +7,25 @@ _scriptName=$(basename $0)
 
 _mode=$1
 _deviceName=${A2P_DEVNAME}
+_deviceFormat=${A2P_DEVFORMAT}
+_deviceSampleFrequency=
+_deviceSampleFormat=
+_deviceChannelCount=
+_cpipedSR=${CPIPED_SR:-NOTDEF}
+_cpipedSS=${CPIPED_SS:-NOTDEF}
+_cpipedCC=${CPIPED_CC:-NOTDEF}
 _owntoneLibPath=${A2P_OT_LIB}
 _owntoneHost=${A2P_OT_HOST:-localhost:3689}
 
 # Command line parameters validation
-while getopts 'd:l:m:hs:' opt; do
+while getopts 'd:f:l:m:hs:' opt; do
   case "$opt" in
     d)
       _deviceName="$OPTARG"
+      ;;
+
+    f)
+      _deviceFormat="$OPTARG"
       ;;
 
     l)
@@ -38,6 +49,10 @@ while getopts 'd:l:m:hs:' opt; do
       echo "        Detect pipe:        A2P_DETECT_<DEVICE NAME>.pipe   Audio detection pipe used by CPIPED"
       echo "        Cat proc pid:       A2P_<DEVICE NAME>.pid           File storing the redirection process id"
       echo "        OwnTone Out Sel:    A2P_OT_OUT_SEL_<DEVICE NAME>    Script automatically sourced before audio redirection, useful to set per device OwnTone outputs"
+      echo "    -f  <DEVICE FORMAT [STR]> Concatenation of sample format and sample frequency separated by two underscores"
+      echo "        Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000"
+      echo "        It overrides the ENV variable A2P_DEVFORMAT and CPIPED_SR, CPIPED_SS, CPIPED_CC defined by cpiped"
+      echo "        To be used only if installed cpiped version doesn't support export of env variables"
       echo "    -l  <OWNTONE LIB [STR]> Set the path for OwnTone library. Audio pipe will be created there"
       echo "        It overrides the ENV variable A2P_OT_LIB"
       echo "    -m  <MODE [STR]>        Set script execution mode. Valid options:"
@@ -81,6 +96,43 @@ fi
 if [[ "-${_deviceName}-" == "--" ]]; then
     errcho "Device name cannot be null"
     exit 100
+fi
+
+# * _deviceFormat ----
+if [[ "-${_deviceFormat}-" != "--" ]]; then
+    echo "Device format: ${_deviceFormat}"
+    _deviceSampleFormat=$(echo ${_deviceFormat} | grep -oP '((?<=^S)[0-9]{1,2}(?=_LE))')
+    if [[ $? -ne 0 ]]; then
+        errcho "Unknown sample format"
+        exit 100
+    fi
+    _deviceSampleFrequency=$(echo ${_deviceFormat} | grep -oP '((?<=__)[0-9]{1,6}$)')
+    if [[ $? -ne 0 ]]; then
+        errcho "Unknown sample frequency"
+        exit 100
+    fi
+else
+    if [[ ${_cpipedSR} != "NOTDEF" ]]; then
+        _deviceSampleFrequency=${_cpipedSR}
+    else 
+        echo "Using default sample rate 44100 Hz"
+        _deviceSampleFrequency=41000
+    fi
+
+    if [[ ${_cpipedSS} != "NOTDEF" ]]; then
+        _deviceSampleFormat=${_cpipedSS}
+    else 
+        echo "Using default sample format S16_LE"
+        _deviceSampleFormat=16
+    fi
+fi
+
+# * channel count ----
+if [[ ${_cpipedCC} != "NOTDEF" ]]; then
+    _deviceChannelCount=${_cpipedCC}
+else 
+    echo "Using default 2 channels count"
+    _deviceChannelCount=2
 fi
 
 # * _owntoneLibPath ----
@@ -163,6 +215,10 @@ elif [[ "${_mode}" == "DETECT" ]]; then
 
     echo "Sound detected, preparing the environment"
 
+    echo "Device sample frequency: ${_deviceSampleFrequency}Hz"
+    echo "Device sample format: ${_deviceSampleFormat}bit Little Endian"
+    echo "Device channel count: ${_deviceChannelCount}"
+
     # Select output(s) if selection script exists
     if [[ -x "${_outSelScript}" ]]; then
         echo "OwnTone output selection script found at '${_outSelScript}'"
@@ -184,8 +240,13 @@ elif [[ "${_mode}" == "DETECT" ]]; then
     fi
     
     echo "Starting audio pipe filling" 
-    cat "${_detectPipeDir}/${_detectPipeName}" > "${_owntoneLibPath}/${_audioPipeName}" &
-    echo $! > "${_pidDir}/${_pidName}"
+    if [[ ${_deviceSampleFrequency} -eq 41000 ]]; then
+        cat "${_detectPipeDir}/${_detectPipeName}" > "${_owntoneLibPath}/${_audioPipeName}" &
+        echo $! > "${_pidDir}/${_pidName}"
+    else
+        sox -t raw -r ${_deviceSampleFrequency} -e signed -b ${_deviceSampleFormat} -c ${_deviceChannelCount} "${_detectPipeDir}/${_detectPipeName}" -t raw -r 44100 -e signed -b 16 -c 2 - > "${_owntoneLibPath}/${_audioPipeName}" &
+        echo $! > "${_pidDir}/${_pidName}"
+    fi
 
 elif [[ "${_mode}" == "SILENCE" ]]; then
     #
@@ -205,6 +266,8 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
             echo "No process to be killed, something is off"
         fi
 
+        # If using sox instead of cat killing might take a bit longer
+        [ ${_deviceSampleFrequency} -ne 44100 ] && sleep 1
 
         # pid clean-up
         echo "" > "${_pidDir}/${_pidName}"
