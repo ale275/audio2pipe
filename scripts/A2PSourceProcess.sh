@@ -8,6 +8,7 @@ _scriptName=$(basename $0)
 _mode=$1
 _deviceName=${A2P_DEVNAME}
 _owntoneLibPath=${A2P_OT_LIB}
+_owntoneHost=${A2P_OT_HOST:-localhost:3689}
 
 # Command line parameters validation
 while getopts 'd:l:m:hs:' opt; do
@@ -160,9 +161,9 @@ elif [[ "${_mode}" == "DETECT" ]]; then
     # DETECT
     #
 
-    echo "Sound detected, preparing the environment" 
+    echo "Sound detected, preparing the environment"
 
-    # Select speaker if selection script exists
+    # Select output(s) if selection script exists
     if [[ -x "${_outSelScript}" ]]; then
         echo "OwnTone output selection script found at '${_outSelScript}'"
         python "${_outSelScript}"
@@ -177,6 +178,9 @@ elif [[ "${_mode}" == "DETECT" ]]; then
             errcho "Failed creating audio pipe '${_owntoneLibPath}/${_audioPipeName}'"
             exit 200
         fi
+
+        echo "Pre-writing audio pipe" 
+        echo "0" > "${_owntoneLibPath}/${_audioPipeName}"
     fi
     
     echo "Starting audio pipe filling" 
@@ -189,17 +193,39 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
     #
     _prevPid=$(< "${_pidDir}/${_pidName}")
 
-    echo "Silence detected killing audio pipe filling pid ${_prevPid}"
+    echo "Silence detected killing audio pipe filling (pid ${_prevPid})"
 
-    kill -0 ${_prevPid}
-    if [[ $? -eq 0 ]]; then
-        echo "Process running, killing it"
-        kill ${_prevPid}
-    else
-        echo "No process to be killed, something is off"
-    fi    
+    # Kill cat only if previous pid is defined
+    if [[ "-${_prevPid}-" != "--" ]]; then
+        kill -0 ${_prevPid}
+        if [[ $? -eq 0 ]]; then
+            echo "Process running, killing it"
+            kill -9 ${_prevPid}
+        else
+            echo "No process to be killed, something is off"
+        fi
 
-    echo "" > "${_pidDir}/${_pidName}"
+
+        # pid clean-up
+        echo "" > "${_pidDir}/${_pidName}"
+    fi
+
+    echo "Clearing OwnTone queue"
+    # Stop playing
+    curl -X PUT "http://${_owntoneHost}/api/player/stop"
+    [ $? -ne 0 ] && echo "WARN failed to stop OwnTone player"
+    # Next song
+    curl -X PUT "http://${_owntoneHost}/api/player/next"
+    [ $? -ne 0 ] && echo "WARN failed skip song on OwnTone player"
+    # Clear queue
+    curl -X PUT "http://${_owntoneHost}/api/queue/clear"
+    [ $? -ne 0 ] && echo "WARN failed clear OwnTone player queue"
+
+    # De-select output(s) if selection script exists
+    if [[ -x "${_outSelScript}" ]]; then
+        echo "Deselect OwnTone output(s)"
+        curl -X PUT "http://${_owntoneHost}/api/outputs/set" --data "{\"outputs\":[]}"
+    fi
 
     echo "Removing audio pipe"
     if [[ -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
