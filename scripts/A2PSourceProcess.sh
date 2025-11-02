@@ -145,12 +145,13 @@ if [[ "${_mode}" == "PRE" ]]; then
             errcho "Failed creating audio detect pipe '${_detectPipeDir}/${_detectPipeName}'"
             exit 200
         fi
+
     else 
         echo "Detect pipe exists"
     fi 
 
     # Remove audio pipe leftovers
-    if [[ -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
+    if [[ -p "${_owntoneLibPath}/${_audioPipeName}" || -f "${_owntoneLibPath}/${_audioPipeName}" ]]; then
         rm "${_owntoneLibPath}/${_audioPipeName}"
     fi
 
