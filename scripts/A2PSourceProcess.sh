@@ -248,6 +248,17 @@ elif [[ "${_mode}" == "DETECT" ]]; then
 
     echo "Sound detected, preparing the environment"
 
+    # Check if pipe filling is already running
+    [[ -e "${_pidDir}/${_pidName}" ]] && _prevPid=$(< "${_pidDir}/${_pidName}")
+    if [[ "-${_prevPid}-" != "--" ]]; then
+        kill -0 ${_prevPid}
+        if [[ $? -eq 0 ]]; then
+            echo "Another pipe filling process is running with PID ${_prevPid}. Leaving it alone"
+            # Might need to add a start playing to OwnTone            
+            exit 0
+        fi
+    fi
+
     echo "Device sample frequency: ${_deviceSampleFrequency}Hz"
     echo "Device sample format: ${_deviceSampleFormat}bit Little Endian"
     echo "Device channel count: ${_deviceChannelCount}"
@@ -286,7 +297,8 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
     #
     # SILENCE
     #
-    _prevPid=$(< "${_pidDir}/${_pidName}")
+
+    [[ -e "${_pidDir}/${_pidName}" ]] && _prevPid=$(< "${_pidDir}/${_pidName}")
 
     echo "Silence detected killing audio pipe filling (pid ${_prevPid})"
 
