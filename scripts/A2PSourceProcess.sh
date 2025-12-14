@@ -16,6 +16,7 @@ _cpipedSS=${CPIPED_SS:-NOTDEF}
 _cpipedCC=${CPIPED_CC:-NOTDEF}
 _owntoneLibPath=${A2P_OT_LIB}
 _owntoneHost=${A2P_OT_HOST:-localhost:3689}
+_silenceWriteLen=.5
 
 # Command line parameters validation
 while getopts 'd:f:l:m:hs:' opt; do
@@ -140,7 +141,6 @@ if [[ "${_mode}" != "PRE" && "${_mode}" != "STOP" ]]; then
     fi
 fi
 
-
 # * _owntoneLibPath ----
 if [[ "-${_owntoneLibPath}-" == "--" ]]; then
     errcho "OwnTone lib cannot be null"
@@ -165,7 +165,20 @@ _prevPid=
 
 # Child variables validation
 
+# Functions
+silenceWrite () {
+    local _pipeToWrite=$1
+    echo "Writing ${_silenceWriteLen}s of silence to '${_pipeToWrite}'"
+    # Calculate audio stream size - OwnTone expects 44100 sample rate 16bit per channel 2 channels
+    _silenceStreamSize=$( echo "(${_silenceWriteLen} * 44100 * (16 / 8) ) / 1" | bc )
+    head -c ${_silenceStreamSize} < /dev/zero > "${_pipeToWrite}"
+}
+
+
 if [[ "${_mode}" == "PRE" ]]; then
+    #
+    # PRE
+    #
 
     echo "Running pre-checks"
 
@@ -223,6 +236,9 @@ if [[ "${_mode}" == "PRE" ]]; then
             errcho "Failed creating audio pipe '${_owntoneLibPath}/${_audioPipeName}'"
             exit 200
         fi
+
+        # Write some silence in the pipe
+        silenceWrite "${_owntoneLibPath}/${_audioPipeName}"
     fi
 
 elif [[ "${_mode}" == "DETECT" ]]; then
@@ -253,11 +269,8 @@ elif [[ "${_mode}" == "DETECT" ]]; then
         fi
 
     else
-        echo "Audio pipe exists, pre-writing some silence"
-        # Calculate 0.5s audio stream size - OwnTone expects 44100 sample rate 16bit per channel 2 channels
-        #_halfSecondSize=$(( ${_deviceSampleFrequency} * (${_deviceSampleFormat} / 8) * ${_deviceChannelCount}  / 2 ))
-        _halfSecondSize=$(( 44100 * (16 / 8) / 2 ))
-        head -c ${_halfSecondSize} < /dev/zero > "${_owntoneLibPath}/${_audioPipeName}" &
+        echo "Audio pipe exists"
+        silenceWrite "${_owntoneLibPath}/${_audioPipeName}"
     fi
 
     echo "Starting audio pipe filling"
@@ -277,7 +290,7 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
 
     echo "Silence detected killing audio pipe filling (pid ${_prevPid})"
 
-    # Kill cat only if previous pid is defined
+    # Kill pipe filling only if previous pid is defined
     if [[ "-${_prevPid}-" != "--" ]]; then
         kill -0 ${_prevPid}
         if [[ $? -eq 0 ]]; then
@@ -287,7 +300,7 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
             echo "No process to be killed, something is off"
         fi
 
-        # If using sox instead of cat killing might take a bit longer
+        # If using sox instead of cat, killing might take a bit longer
         [[ "${_deviceSampleFrequency}" != "44100" || "${_deviceSampleFormat}" != "16" || "${_deviceChannelCount}" != "2" ]] && sleep 1
 
         # pid clean-up
@@ -315,6 +328,7 @@ elif [[ "${_mode}" == "STOP" ]]; then
     #
     # STOP
     #
+
     if [[ -p "${_owntoneLibPath}/${_audioPipeName}" || -f "${_owntoneLibPath}/${_audioPipeName}" ]]; then
         echo "Removing audio pipe"
         rm "${_owntoneLibPath}/${_audioPipeName}"
@@ -328,3 +342,5 @@ elif [[ "${_mode}" == "STOP" ]]; then
         rm "${_pidDir}/${_pidName}"
     fi
 fi
+
+exit 0
