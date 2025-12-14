@@ -211,6 +211,17 @@ if [[ "${_mode}" == "PRE" ]]; then
         rm "${_owntoneLibPath}/${_audioPipeName}"
     fi
 
+    # Audio Pipe
+    if [[ ! -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
+        echo "Creating audio pipe '${_owntoneLibPath}/${_audioPipeName}'"
+        mkfifo -m 666 "${_owntoneLibPath}/${_audioPipeName}"
+
+        if [[ $? -ne 0 ]]; then
+            errcho "Failed creating audio pipe '${_owntoneLibPath}/${_audioPipeName}'"
+            exit 200
+        fi
+    fi
+
 elif [[ "${_mode}" == "DETECT" ]]; then
     #
     # DETECT
@@ -232,14 +243,18 @@ elif [[ "${_mode}" == "DETECT" ]]; then
     if [[ ! -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
         echo "Creating audio pipe '${_owntoneLibPath}/${_audioPipeName}'"
         mkfifo -m 666 "${_owntoneLibPath}/${_audioPipeName}"
-        
+
         if [[ $? -ne 0 ]]; then
             errcho "Failed creating audio pipe '${_owntoneLibPath}/${_audioPipeName}'"
             exit 200
         fi
 
-        echo "Pre-writing audio pipe" 
-        echo "0" > "${_owntoneLibPath}/${_audioPipeName}"
+    else
+        echo "Audio pipe exists, pre-writing some silence"
+        # Calculate 0.5s audio stream size - OwnTone expects 44100 sample rate 16bit per channel 2 channels
+        #_halfSecondSize=$(( ${_deviceSampleFrequency} * (${_deviceSampleFormat} / 8) * ${_deviceChannelCount}  / 2 ))
+        _halfSecondSize=$(( 44100 * (16 / 8) / 2 ))
+        head -c ${_halfSecondSize} < /dev/zero > "${_owntoneLibPath}/${_audioPipeName}" &
     fi
 
     echo "Starting audio pipe filling"
@@ -291,11 +306,6 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
     if [[ -x "${_outSelScript}" ]]; then
         echo "Deselect OwnTone output(s)"
         curl -sS -X PUT "http://${_owntoneHost}/api/outputs/set" --data "{\"outputs\":[]}"
-    fi
-
-    echo "Removing audio pipe"
-    if [[ -p "${_owntoneLibPath}/${_audioPipeName}" ]]; then
-        rm "${_owntoneLibPath}/${_audioPipeName}"
     fi
 
 fi
