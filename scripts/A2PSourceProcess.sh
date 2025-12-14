@@ -39,7 +39,7 @@ while getopts 'd:f:l:m:hs:' opt; do
     s)
       _scriptHome="$OPTARG"
       ;;
-   
+
     ?|h)
       echo "Usage: $(basename $0) [-d arg] [-l arg] [-m arg] [-s arg]"
       echo "---------------------------------------------------------"
@@ -98,42 +98,45 @@ if [[ "-${_deviceName}-" == "--" ]]; then
     exit 100
 fi
 
-# * _deviceFormat ----
-if [[ "-${_deviceFormat}-" != "--" ]]; then
-    echo "Device format: ${_deviceFormat}"
-    _deviceSampleFormat=$(echo ${_deviceFormat} | grep -oP '((?<=^S)[0-9]{1,2}(?=_LE))')
-    if [[ $? -ne 0 ]]; then
-        errcho "Unknown sample format"
-        exit 100
-    fi
-    _deviceSampleFrequency=$(echo ${_deviceFormat} | grep -oP '((?<=__)[0-9]{1,6}$)')
-    if [[ $? -ne 0 ]]; then
-        errcho "Unknown sample frequency"
-        exit 100
-    fi
-else
-    if [[ ${_cpipedSR} != "NOTDEF" ]]; then
-        _deviceSampleFrequency=${_cpipedSR}
-    else 
-        echo "Using default sample rate 44100 Hz"
-        _deviceSampleFrequency=41000
+if [[ "${_mode}" != "PRE" ]]; then
+    # * _deviceFormat ----
+    if [[ "-${_deviceFormat}-" != "--" ]]; then
+        echo "Device format: ${_deviceFormat}"
+        _deviceSampleFormat=$(echo ${_deviceFormat} | grep -oP '((?<=^S)[0-9]{1,2}(?=_LE))')
+        if [[ $? -ne 0 ]]; then
+            errcho "Unknown sample format"
+            exit 100
+        fi
+        _deviceSampleFrequency=$(echo ${_deviceFormat} | grep -oP '((?<=__)[0-9]{1,6}$)')
+        if [[ $? -ne 0 ]]; then
+            errcho "Unknown sample frequency"
+            exit 100
+        fi
+    else
+        if [[ "${_cpipedSR}" != "NOTDEF" ]]; then
+            _deviceSampleFrequency=${_cpipedSR}
+        else
+            echo "Using default sample rate 44100 Hz"
+            _deviceSampleFrequency=41000
+        fi
+
+        if [[ "${_cpipedSS}" != "NOTDEF" ]]; then
+            _deviceSampleFormat=${_cpipedSS}
+        else
+            echo "Using default sample format S16_LE"
+            _deviceSampleFormat=16
+        fi
     fi
 
-    if [[ ${_cpipedSS} != "NOTDEF" ]]; then
-        _deviceSampleFormat=${_cpipedSS}
-    else 
-        echo "Using default sample format S16_LE"
-        _deviceSampleFormat=16
+    # * channel count ----
+    if [[ "${_cpipedCC}" != "NOTDEF" ]]; then
+        _deviceChannelCount=${_cpipedCC}
+    else
+        echo "Using default 2 channels count"
+        _deviceChannelCount=2
     fi
 fi
 
-# * channel count ----
-if [[ ${_cpipedCC} != "NOTDEF" ]]; then
-    _deviceChannelCount=${_cpipedCC}
-else 
-    echo "Using default 2 channels count"
-    _deviceChannelCount=2
-fi
 
 # * _owntoneLibPath ----
 if [[ "-${_owntoneLibPath}-" == "--" ]]; then
@@ -160,7 +163,7 @@ _prevPid=
 # Child variables validation
 
 if [[ "${_mode}" == "PRE" ]]; then
-    
+
     echo "Running pre-checks"
 
     # * _detectPipeDir ----
@@ -172,7 +175,7 @@ if [[ "${_mode}" == "PRE" ]]; then
             errcho "Failed creating detect pipe folder '${_detectPipeDir}'"
             exit 110
         fi
-    else 
+    else
         echo "Detect pipe folder exists"
     fi
 
@@ -185,7 +188,7 @@ if [[ "${_mode}" == "PRE" ]]; then
             errcho "Failed creating process pid folder '${_pidDir}'"
             exit 110
         fi
-    else 
+    else
         echo "Pid folder exists"
     fi
 
@@ -193,15 +196,15 @@ if [[ "${_mode}" == "PRE" ]]; then
     if [[ ! -p "${_detectPipeDir}/${_detectPipeName}" ]]; then
         echo "Creating audio detect pipe '${_detectPipeDir}/${_detectPipeName}'"
         mkfifo -m 666 "${_detectPipeDir}/${_detectPipeName}"
-        
+
         if [[ $? -ne 0 ]]; then
             errcho "Failed creating audio detect pipe '${_detectPipeDir}/${_detectPipeName}'"
             exit 200
         fi
 
-    else 
+    else
         echo "Detect pipe exists"
-    fi 
+    fi
 
     # Remove audio pipe leftovers
     if [[ -p "${_owntoneLibPath}/${_audioPipeName}" || -f "${_owntoneLibPath}/${_audioPipeName}" ]]; then
