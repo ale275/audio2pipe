@@ -278,19 +278,19 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
 
     echo "Clearing OwnTone queue"
     # Stop playing
-    curl -X PUT "http://${_owntoneHost}/api/player/stop"
+    curl -sS -X PUT "http://${_owntoneHost}/api/player/stop"
     [ $? -ne 0 ] && echo "WARN failed to stop OwnTone player"
     # Next song
-    curl -X PUT "http://${_owntoneHost}/api/player/next"
+    curl -sS -X PUT "http://${_owntoneHost}/api/player/next"
     [ $? -ne 0 ] && echo "WARN failed skip song on OwnTone player"
     # Clear queue
-    curl -X PUT "http://${_owntoneHost}/api/queue/clear"
+    curl -sS -X PUT "http://${_owntoneHost}/api/queue/clear"
     [ $? -ne 0 ] && echo "WARN failed clear OwnTone player queue"
 
     # De-select output(s) if selection script exists
     if [[ -x "${_outSelScript}" ]]; then
         echo "Deselect OwnTone output(s)"
-        curl -X PUT "http://${_owntoneHost}/api/outputs/set" --data "{\"outputs\":[]}"
+        curl -sS -X PUT "http://${_owntoneHost}/api/outputs/set" --data "{\"outputs\":[]}"
     fi
 
     echo "Removing audio pipe"
