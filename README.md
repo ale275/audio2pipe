@@ -10,6 +10,8 @@ Script has three execution phases
 - **Detect:** Section run at sound detect. It runs python output selector callback script. script can be replaced at user discretion by replacing the symlinked script
 - **Silence:** Performs all the files clean-up when audio source is stopped
 
+Lockfile and pipe filling PID checks prevent parallel command execution and multiple pipe fillings resulting in unpleasant white noise blasting from speakers. These features are especially useful when audio is sourced from record players.
+
 #### **scripts/A2POutputselector.py**
 Python script using OwnTone http API(s) to select the output(s) defined in ENV variable at sound detect phase.
 
@@ -28,19 +30,22 @@ Existence of all dependencies and daemon base dir configuration will be also don
   - Detect pipe: *var/pipes/A2PDETECT_<A2P_DEVNAME>.pipe*
   - Audio pipe: *<A2P_OT_LIB>/<A2P_DEVNAME>*
   - systemd service file: *cpiped_<A2P_DEVNAME>.service*
-- **A2P_DEVFORMAT** *(Not recommended)*: Concatenation of sample format and sample frequency separated by two underscores  
-  Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000  
-  Default sample rate *41000Hz*  
-  Default sample size *16bit*  
-  Default capture channel *2*  
-  **Preferred** approach is to read cpiped env variables CPIPED_SR, CPIPED_SS, CPIPED_CC, respectively for sample rate, sample size and capture channel directly
 - **A2P_CP_SF:** audio sample rate to be passed to cpiped in *hz*. Default *41000*
+  cpiped will then set env variables *CPIPED_SR*, *CPIPED_SS*, *CPIPED_CC*, respectively for sample rate, sample size and capture channel directly
 - **A2P_CP_SOUNDCARD:** audio input soundcard to be passed to cpiped in *hw:\<card>,\<device>* format
 - **A2P_CP_SL:** cpiped silence level
 - **A2P_OT_LIB:** OwnTone library folder. Where the audio pipe will be created and filled on sound detection
 - **A2P_OT_HOST:** OwnTOne server hostname. Default *localhost*
 - **A2P_OT_OUT_LIST:** OwnTone output(s) label to be selected at sound detect
 - **A2P_DEBUG:** make log more verbose. Accepts True or False values
+
+#### *Not recommended*
+- **A2P_DEVFORMAT** : Concatenation of sample format and sample frequency separated by two underscores  
+  Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000  
+  Default sample rate *41000Hz*  
+  Default sample size *16bit*  
+  Default capture channel *2*  
+  **Preferred** approach is to read cpiped env variables *CPIPED_SR*, *CPIPED_SS*, *CPIPED_CC*, respectively for sample rate, sample size and capture channel directly
 
 ## Dependencies
 - Bash
