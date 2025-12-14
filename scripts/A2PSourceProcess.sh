@@ -5,7 +5,7 @@ errcho(){ >&2 echo $@; }
 _scriptHome=${A2P_HOME:-$HOME}
 _scriptName=$(basename $0)
 
-_mode=$1
+_mode=
 _deviceName=${A2P_DEVNAME}
 _deviceFormat=${A2P_DEVFORMAT}
 _deviceSampleFrequency=
@@ -41,7 +41,7 @@ while getopts 'd:f:l:m:hs:' opt; do
       _scriptHome="$OPTARG"
       ;;
 
-    ?|h)
+    *|?|h)
       echo "Usage: $(basename $0) [-d arg] [-l arg] [-m arg] [-s arg]"
       echo "---------------------------------------------------------"
       echo "    -d  <DEVICE NAME [STR]> Set name of connected device to the pipe. Will create all the mnemonics"
@@ -141,7 +141,13 @@ if [[ "${_mode}" != "PRE" && "${_mode}" != "STOP" ]]; then
     fi
 fi
 
+# * _scriptHome ----
+# remove eventual trailing slash
+_scriptHome=$( echo ${_scriptHome} | sed 's/\/$//' )
+
 # * _owntoneLibPath ----
+# remove eventual trailing slash
+_owntoneLibPath=$( echo ${_owntoneLibPath} | sed 's/\/$//' )
 if [[ "-${_owntoneLibPath}-" == "--" ]]; then
     errcho "OwnTone lib cannot be null"
     exit 100
