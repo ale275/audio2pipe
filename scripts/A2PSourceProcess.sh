@@ -241,9 +241,9 @@ elif [[ "${_mode}" == "DETECT" ]]; then
         echo "Pre-writing audio pipe" 
         echo "0" > "${_owntoneLibPath}/${_audioPipeName}"
     fi
-    
-    echo "Starting audio pipe filling" 
-    if [[ ${_deviceSampleFrequency} -eq 41000 ]]; then
+
+    echo "Starting audio pipe filling"
+    if [[ "${_deviceSampleFrequency}" == "44100" && "${_deviceSampleFormat}" == "16" && "${_deviceChannelCount}" == "2" ]]; then
         cat "${_detectPipeDir}/${_detectPipeName}" > "${_owntoneLibPath}/${_audioPipeName}" &
         echo $! > "${_pidDir}/${_pidName}"
     else
@@ -270,7 +270,7 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
         fi
 
         # If using sox instead of cat killing might take a bit longer
-        [ ${_deviceSampleFrequency} -ne 44100 ] && sleep 1
+        [[ "${_deviceSampleFrequency}" != "44100" || "${_deviceSampleFormat}" != "16" || "${_deviceChannelCount}" != "2" ]] && sleep 1
 
         # pid clean-up
         echo "" > "${_pidDir}/${_pidName}"
