@@ -59,11 +59,13 @@ while getopts 'd:f:l:m:hs:' opt; do
       echo "        PRE     Run all pre-checks to be sure all folders and files exists. Sourced only once at service start"
       echo "        DETECT  Redirect detection pipe to main audio pipe"
       echo "        SILENCE Clean-up once no audio is being sent through the pipe"
+      echo "        STOP    Clean-up once service is stopped"
       echo ""
       echo "        Mode can be derived from script name ending, useful if called though symlinks"
       echo "        Pre     -> MODE is set to PRE"
       echo "        Detect  -> MODE is set to DETECT"
       echo "        Silence -> MODE is set to SILENCE"
+      echo "        Stop    -> MODE is set to STOP"
       echo "    -s  <SCRIPT HOME [STR]> Set script execution root dir"
       echo "        It overrides the ENV variable A2P_HOME. If nor the variable nor the parameter are passed user home is used as root dir"
       echo ""
@@ -86,8 +88,9 @@ if [[ "-${_mode}-" == "--" ]]; then
     [[ "${_scriptName}" =~ (Pre)$ ]] && _mode=PRE
     [[ "${_scriptName}" =~ (Detect)$ ]] && _mode=DETECT
     [[ "${_scriptName}" =~ (Silence)$ ]] && _mode=SILENCE
+    [[ "${_scriptName}" =~ (Stop)$ ]] && _mode=STOP
 fi
-if [[ ! "${_mode}" =~ (PRE)|(DETECT)|(SILENCE) ]]; then
+if [[ ! "${_mode}" =~ (PRE)|(DETECT)|(SILENCE)|(STOP) ]]; then
     errcho "Mode '${_mode}' is not a valid mode"
     exit 100
 fi
@@ -98,7 +101,7 @@ if [[ "-${_deviceName}-" == "--" ]]; then
     exit 100
 fi
 
-if [[ "${_mode}" != "PRE" ]]; then
+if [[ "${_mode}" != "PRE" && "${_mode}" != "STOP" ]]; then
     # * _deviceFormat ----
     if [[ "-${_deviceFormat}-" != "--" ]]; then
         echo "Device format: ${_deviceFormat}"
@@ -308,4 +311,20 @@ elif [[ "${_mode}" == "SILENCE" ]]; then
         curl -sS -X PUT "http://${_owntoneHost}/api/outputs/set" --data "{\"outputs\":[]}"
     fi
 
+elif [[ "${_mode}" == "STOP" ]]; then
+    #
+    # STOP
+    #
+    if [[ -p "${_owntoneLibPath}/${_audioPipeName}" || -f "${_owntoneLibPath}/${_audioPipeName}" ]]; then
+        echo "Removing audio pipe"
+        rm "${_owntoneLibPath}/${_audioPipeName}"
+    fi
+    if [[ -p "${_detectPipeDir}/${_detectPipeName}" || -f "${_detectPipeDir}/${_detectPipeName}" ]]; then
+        echo "Removing detect pipe"
+        rm "${_detectPipeDir}/${_detectPipeName}"
+    fi
+    if [[ -p "${_pidDir}/${_pidName}" || -f "${_pidDir}/${_pidName}" ]]; then
+        echo "Removing pipe filling pid"
+        rm "${_pidDir}/${_pidName}"
+    fi
 fi
