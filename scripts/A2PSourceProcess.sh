@@ -16,6 +16,8 @@ _cpipedSS=${CPIPED_SS:-NOTDEF}
 _cpipedCC=${CPIPED_CC:-NOTDEF}
 _owntoneLibPath=${A2P_OT_LIB}
 _owntoneHost=${A2P_OT_HOST:-localhost:3689}
+_lockWait=.2
+_lockRetryCntMax=5
 _silenceWriteLen=.5
 
 # Command line parameters validation
@@ -162,9 +164,10 @@ echo "Executing A2P script for device '${_deviceName}' in mode '${_mode}'"
 
 # Child variables init
 _audioPipeName="${_deviceName}"
-_outSelScript="${_scriptHome}/bin/A2P_OT_OUT_SEL_${_deviceName}"
 _detectPipeDir="${_scriptHome}/var/pipes"
 _detectPipeName="A2P_DETECT_${_deviceName}.pipe"
+_outSelScript="${_scriptHome}/bin/A2P_OT_OUT_SEL_${_deviceName}"
+_lockFileName="A2P_${_deviceName}.lock"
 _pidDir="${_scriptHome}/var/run"
 _pidName="A2P_${_deviceName}.pid"
 _prevPid=
@@ -172,6 +175,89 @@ _prevPid=
 # Child variables validation
 
 # Functions
+createLockFile () {
+    # If PID dir doesn't exist for sure nothing can run concurrently
+    if [[ -d "${_pidDir}" ]]; then
+        echo "Creating lockfile '${_pidDir}/${_lockFileName}.${_mode}'"
+        touch "${_pidDir}/${_lockFileName}.${_mode}"
+        if [[ $? -eq 0 ]]; then
+            return 0
+        else
+            errcho "Failed creating lock file '${_pidDir}/${_lockFileName}.${_mode}'"
+            return 1
+        fi
+    else 
+        return 0
+    fi
+}
+
+removeLockFile () {
+    # If PID dir doesn't exist for sure nothing can run concurrently
+    if [[ -d "${_pidDir}" ]]; then
+        echo "Removing lockfile '${_pidDir}/${_lockFileName}.${_mode}'"
+
+        if [[ ! -f "${_pidDir}/${_lockFileName}.${_mode}" ]]; then
+            echo "WARN: No lockfile to be removed, something is off"
+            return 0
+        fi
+
+        rm "${_pidDir}/${_lockFileName}.${_mode}"
+        if [[ $? -eq 0 ]]; then
+            return 0
+        else
+            errcho "Failed removing lock file '${_pidDir}/${_lockFileName}.${_mode}'"
+            return 1
+        fi
+    else 
+        return 0
+    fi
+}
+
+checkLockFile () {
+    # If PID dir doesn't exist for sure nothing can run concurrently
+    if [[ -d "${_pidDir}" ]]; then
+
+        # Loop with exponential wait until max retry count has been reached
+        local _lockRetryCnt=0
+        until [ ${_lockRetryCnt} -gt ${_lockRetryCntMax} ]; do
+            # Check lockfile existence
+            find "${_pidDir}" -name "${_lockFileName}.*" | grep . > /dev/null 2>&1
+            local _lockFileCheck=$?
+            if [[ ${_lockFileCheck} -eq 0 ]]; then
+                # Get list of found lock file(s)
+                _lockFileFound=$(find "${_pidDir}" -name "${_lockFileName}.*" -exec basename {} \; | grep . | paste -s -d ',')
+                echo "Another A2P command for device ${_deviceName} is running. '${_lockFileFound}' lockfile(s) found. Retrying in ${_lockWait}s"
+                
+                # Sleep and increment sleep
+                sleep ${_lockWait}
+                _lockWait=$( echo "${_lockWait} + ${_lockWait}" | bc )
+            else 
+                # No lockfile found
+                return 0
+            fi
+
+            ((_lockRetryCnt++))
+        done
+
+        # Lock file not removed before maximum retry loop occurred
+        return 1
+
+    else 
+        return 0
+    fi
+}
+
+onExitCleanup () {
+    local _calledExitCode=$?
+
+    # Remove lockfile to prevent other commands to be run
+    removeLockFile
+    _checkLockRemoval=$?
+    [[ ${_checkLockRemoval} -ne 0 ]] && exit 112
+
+    exit ${_calledExitCode}
+}
+
 silenceWrite () {
     local _pipeToWrite=$1
     echo "Writing ${_silenceWriteLen}s of silence to '${_pipeToWrite}'"
@@ -180,6 +266,21 @@ silenceWrite () {
     head -c ${_silenceStreamSize} < /dev/zero > "${_pipeToWrite}"
 }
 
+# Check if other A2PSourceProcess commands are running
+checkLockFile
+_checkLockExistence=$?
+if [[ ${_checkLockExistence} -ne 0 ]]; then
+    errecho "Another A2P command for device ${_deviceName} is still running. Exiting"
+    exit 110
+fi
+
+# Create lockfile to prevent other commands to be run
+createLockFile
+_checkLockCreation=$?
+[[ ${_checkLockCreation} -ne 0 ]] && exit 111
+
+# Trap exit command to cleanup lockfile
+trap "onExitCleanup" EXIT
 
 if [[ "${_mode}" == "PRE" ]]; then
     #
@@ -359,6 +460,11 @@ elif [[ "${_mode}" == "STOP" ]]; then
         echo "Removing pipe filling pid"
         rm "${_pidDir}/${_pidName}"
     fi
+    if [[ -p "${_pidDir}/${_lockFileName}.*" || -f "${_pidDir}/${_lockFileName}.*" ]]; then
+        echo "Removing lock file(s)"
+        rm "${_pidDir}/${_lockFileName}.*"
+    fi
 fi
 
+# Trapped exit will remove lockfile to prevent other commands to be run
 exit 0
