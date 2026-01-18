@@ -34,7 +34,7 @@ def owntone_get_outputs(setids = False, checkSelection = False, debug = False):
         if debug:
             print(ownToneOutDetails)
         if ownToneOutDetails['name'] in userOutList:
-            print("Found '" + ownToneOutDetails['name'] + " type '" + ownToneOutDetails['type'] + "' selected '" + str(ownToneOutDetails['selected']) + "'")
+            print("Found '" + ownToneOutDetails['name'] + "' type '" + ownToneOutDetails['type'] + "' selected '" + str(ownToneOutDetails['selected']) + "'")
             if setids == True:
                 ownToneOutSetStruct['outputs'].append(ownToneOutDetails['id'])
             if checkSelection:
