@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import requests
 import sys
 
@@ -105,7 +106,7 @@ userOutList = userOutString.split(',')
 # * sort and unique 
 userOutList = sorted(set(userOutList))
 # * remove leading and trailing spaces, tabs and new line introduced by mistake in userOutList 
-userOutList = [userOut.strip(" \n\t") for userOut in userOutList]
+userOutList = [re.sub("^(\s|\t|\n)|(\s|\t|\n)$", "", userOut) for userOut in userOutList]
 
 # Check OwnTone server availability
 print("Checking OwnTone availability")
