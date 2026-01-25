@@ -9,6 +9,10 @@
 [![Forks][forks-shield]][forks-url]
 <!-- ![Build flow][build-shield] -->
 
+![bash][bash-shield]
+![python][python-shield]
+
+
     audio2pipe is a set of utilities to pipe sound towards other software
 
 `audio2pipe` is a set of scripts and services to better handle pipe creation for audio streamers leveraging [cpiped](https://github.com/ale275/cpiped) under the hood. Recommended in conjunction with [OwnTone](https://owntone.github.io/owntone-server/)
@@ -23,6 +27,7 @@
 - [Usage](#usage)
   - [scripts/A2PSourceProcess.sh](#scriptsa2psourceprocesssh)
   - [scripts/A2POutputselector.py](#scriptsa2poutputselectorpy)
+  - [scripts/A2PToggle.sh](#scriptsa2ptogglesh)
   - [service/cpiped\_Template.service](#servicecpiped_templateservice)
   - [Configuration](#configuration)
 - [ToDo(s)](#todos)
@@ -61,6 +66,7 @@
    ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessDetect"
    ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessSilence"
    ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessStop"
+   ln -s "${A2P_HOME}/bin/A2PToggle.sh" "${A2P_HOME}/bin/A2PToggle"
    ```
 
    To configure autmatic output selection on sound detect please refer to [scripts/A2POutputselector.py](#scriptsa2poutputselectorpy) section.
@@ -108,6 +114,10 @@ export A2P_HOME=/home/user
 export A2P_DEVNAME=Test_Device
 ln -s "${A2P_HOME}/bin/A2POutputSelector.py" "${A2P_HOME}/bin/A2P_OT_OUT_SEL_${A2P_DEVNAME}"
 ```
+
+### scripts/A2PToggle.sh
+
+Script to toggle the various cpiped services. Must be run as `sudo`
 
 ### service/cpiped_Template.service
 
@@ -313,7 +323,8 @@ Usage of following variable is **not recommended**
 - [ ] Move ENV variable setup from Service file to EnvironFile to define monitoring pipe in pre stage. Under evaluation
 - [ ] Rework detect pipe section that is prone to config error
 - [ ] Create install script
-- [ ] Add command line parameters to A2POutputselector.py
+- [ ] Add command line parameters to scripts/A2POutputselector.py
+- [ ] Add command line parameters to scripts/A2PToggle.sh
 - [x] Change detect pipe extension from .pipe to .detectpipe
 - [ ] Add cpiped existence check in <A2P_ExecPhase>==Pre
 - [x] Improve systemd service ExecStop section of script to stop the device specific instance of cpiped and not all of them
@@ -348,3 +359,5 @@ Created to be used with [OwnTone](https://owntone.github.io/owntone-server/)
 [issues-url]: https://github.com/ale275/audio2pipe/issues
 [license-shield]: https://img.shields.io/github/license/ale275/audio2pipe.svg
 [license-url]: https://github.com/ale275/audio2pipe/blob/master/LICENSE
+[bash-shield]: https://img.shields.io/badge/bash-1f425f?style=flat&logo=gnubash
+[python-shield]: https://img.shields.io/badge/python-1f425f?style=flat&logo=python
