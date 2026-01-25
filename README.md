@@ -1,70 +1,309 @@
-# audio2pipe
-Set of scripts and services to better handle pipe creation for audio streamers. Recommended in conjunction with [OwnTone](https://owntone.github.io/owntone-server/)
+<h1>audio2pipe</h1>
 
-System is comprised of the following components:
-#### **scripts/A2PSourceProcess.sh**
-Universal bash script taking various ENV variable for configuration to make monitor and audio pipes, pid monitoring and output selector callback function.
+<!-- [![Release][release-shield]][release-url] -->
+![GitHub commit activity][commit-shield]
+[![Issues][issues-shield]][issues-url]
+[![Contributors][contributors-shield]][contributors-url]
+[![project_license][license-shield]][license-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Forks][forks-shield]][forks-url]
+<!-- ![Build flow][build-shield] -->
 
-Script has three execution phases
-- **Pre:** running all the preparatory check before cpiped is started. Executed only once at service start
-- **Detect:** Section run at sound detect. It runs python output selector callback script. script can be replaced at user discretion by replacing the symlinked script
+    audio2pipe is a set of utilities to pipe sound towards other software
+
+`audio2pipe` is a set of scripts and services to better handle pipe creation for audio streamers leveraging [cpiped](https://github.com/ale275/cpiped) under the hood. Recommended in conjunction with [OwnTone](https://owntone.github.io/owntone-server/)
+
+## Contents
+- [Contents](#contents)
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+  - [scripts/A2PSourceProcess.sh](#scriptsa2psourceprocesssh)
+  - [scripts/A2POutputselector.py](#scriptsa2poutputselectorpy)
+  - [Configuration](#configuration)
+- [ToDo(s)](#todos)
+- [Acknowledgments](#acknowledgments)
+  - [Top contributors:](#top-contributors)
+
+## Features
+- systemd service to manage cpiped instances supporting different sample rates
+- Multiple input device supported with dedicated configuration
+- Interlock to avoid out of sequence triggering of per device script
+- Automatic OwnTone output selection on sound detection
+
+## Getting Started
+
+### Prerequisites
+`audio2pipe` requires 
+- bash
+- [cpiped](https://github.com/ale275/cpiped)
+- [python](https://www.python.org/) >= v3.11.2
+  - requests 2.28.1
+
+### Installation
+1. Clone the repository
+   ```sh
+   git clone https://github.com/ale275/audio2pipe.git
+   ```
+2. Install scripts in audio2pipe base dir defined by *A2P_HOME* [env variable](#configuration) and setup needed symlink
+   ```sh
+   cd audio2pipe
+   export A2P_HOME=/home/user
+   install  -m 755 -D scripts/* -t "${A2P_HOME}/bin"
+   ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessPre"
+   ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessDetect"
+   ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessSilence"
+   ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessStop"
+   ```
+
+## Usage
+
+`audio2pipe` scripts functionality description
+
+### scripts/A2PSourceProcess.sh
+Main bash script taking various ENV variable as [configuration](#configuration) to make, monitor and clean-up audio pipes, pid monitoring and output selection via callback function.
+
+Script has three execution phases from now on <A2P_ExecPhase>
+- **Pre:** running all the preparatory check before `cpiped` is started. Executed only once at service start
+- **Detect:** Section run at sound detect. It runs python output selector callback script. Script can be replaced at user discretion by replacing the symlinked script
 - **Silence:** Performs all the files clean-up when audio source is stopped
 
 Lockfile and pipe filling PID checks prevent parallel command execution and multiple pipe fillings resulting in unpleasant white noise blasting from speakers. These features are especially useful when audio is sourced from record players.
 
-#### **scripts/A2POutputselector.py**
-Python script using OwnTone http API(s) to select the output(s) defined in ENV variable at sound detect phase.
+### scripts/A2POutputselector.py
+Python script using [OwnTone http API(s)](https://owntone.github.io/owntone-server/json-api/) to select the output(s) defined in ENV variable at *sound detect* phase. It's usage is not mandatory
 
-#### **Install**
-Script to create a customized set of audio and monitor pipe for each device and audio source pair.
-Generic bash script will take care of environment pre-check, audio detect tasks and silence clean-up.
+### Configuration
+Script configuration are mainly managed though ENV variables
 
-Associated SystemD service file will be created to run cpiped, customized for the specific input.
+<table>
+  <tr>
+    <th>Variable<br>name</th>
+    <th>Description</th>
+    <th>Type</th>
+    <th>Default</th>
+    <th>Range/Format</th>
+    <th>Required?</th>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_HOME</code></td>
+    <!-- Description -->
+    <td>audio2pipe basedir<br><br>
+      Folder structure:
+      <ul>
+        <li><i>bin</i>: contains all the scripts</li>
+        <li><i>var/pipes</i>: contains all the detect pipes needed by <code>cpiped</code></li>
+        <li><i>var/run</i>: contains pid files and lockfiles for <code>audio2pipe</code> and <code>cpiped</code></li>
+      </ul>
+    </td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Type -->
+    <td><code>$HOME</code></td>
+    <!-- Range/Format -->
+    <td></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_DEVNAME</code></td>
+    <!-- Description -->
+    <td>Device input name<br><br>
+      Mnemonic that will define all the specialized file name
+      <ul>
+        <li>Audio pipe: <i>&lt;A2P_OT_LIB&gt;/&lt;A2P_DEVNAME&gt;</i></li>
+        <li>Audio pipe filling PID file: <i>var/run/A2P_&lt;A2P_DEVNAME&gt;.pid</i></li>
+        <li><code>cpiped</code> PID file: <i>var/run/A2P_&lt;A2P_DEVNAME&gt;.pid</i></li>
+        <li>Detect pipe: <i>var/pipes/A2P_&lt;A2P_DEVNAME&gt;.pipe</i></li>
+        <li>Lockfile file: <i>var/run/A2P_&lt;A2P_DEVNAME&gt;.lock.&lt;A2P_ExecPhase&gt;</i></li>
+        <li>systemd service file: <i>cpiped_&lt;A2P_DEVNAME&gt;.service</i></li>
+      </ul>
+    </td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Type -->
+    <td></td>
+    <!-- Range/Format -->
+    <td></td>
+    <!-- Required? -->
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_CP_SF</code></td>
+    <!-- Description -->
+    <td>Audio device sample rate to be passed to <code>cpiped</code> in <i>hz</i><br><br>
+    <code>cpiped</code> will then set env variables <i>CPIPED_SR</i>, <i>CPIPED_SS</i>, <i>CPIPED_CC</i>, respectively for sample rate, sample size and capture channel directly
+  </td>
+    <!-- Type -->
+    <td><code>integer</code></td>
+    <!-- Default -->
+    <td><code>44100</code></td>
+    <!-- Range/Format -->
+    <td><code>16000 - 192000</code></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_CP_SOUNDCARD</code></td>
+    <!-- Description -->
+    <td>Audio capture soundcard to be passed to <code>cpiped</code> in ALSA format</td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Default -->
+    <td><code>'default'</code></td>
+    <!-- Range/Format -->
+    <td><code>hw:&lt;card&gt;,&lt;device&gt;</code></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_CP_SL</code></td>
+    <!-- Description -->
+    <td><code>cpiped</code> silence level</td>
+    <!-- Type -->
+    <td><code>integer</code></td>
+    <!-- Default -->
+    <td><code>100</code></td>
+    <!-- Range/Format -->
+    <td><code>1 - 32767</code></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_OT_LIB</code></td>
+    <!-- Description -->
+    <td>OwnTone library folder. Where the audio pipe will be created and filled on sound detection</td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Default -->
+    <td></td>
+    <!-- Range/Format -->
+    <td></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_OT_HOST</code></td>
+    <!-- Description -->
+    <td>OwnTone server hostname</td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Default -->
+    <td><code>localhost</code></td>
+    <!-- Range/Format -->
+    <td></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_OT_OUT_LIST</code></td>
+    <!-- Description -->
+    <td>OwnTone output(s) label to be selected at sound detect</td>
+    <!-- Type -->
+    <td><code>string</code><br><code>comma separated list</code></td>
+    <!-- Default -->
+    <td></td>
+    <!-- Range/Format -->
+    <td></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_DEBUG</code></td>
+    <!-- Description -->
+    <td>Make log more verbose. Accepts True or False values</td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Default -->
+    <td><code>False</code></td>
+    <!-- Range/Format -->
+    <td><code>True - False</code></td>
+    <!-- Required? -->
+    <td>No</td>
+  </tr>
+</table>
 
-Existence of all dependencies and daemon base dir configuration will be also done here.
+Usage of following variable is **not recommended**
 
-### Config ENV variables
-- **A2P_HOME:** audio2pipe base-dir. *var* folder will be created here containing subfolder for PID and detect pipe(s) managements. If not specified user home will be used
-- **A2P_DEVNAME:** device input name. Mnemonic that will define all the specialized file name
-  - PID file: *var/run/A2P_<A2P_DEVNAME>.pid*
-  - Detect pipe: *var/pipes/A2PDETECT_<A2P_DEVNAME>.pipe*
-  - Audio pipe: *<A2P_OT_LIB>/<A2P_DEVNAME>*
-  - systemd service file: *cpiped_<A2P_DEVNAME>.service*
-- **A2P_CP_SF:** audio sample rate to be passed to cpiped in *hz*. Default *41000*
-  cpiped will then set env variables *CPIPED_SR*, *CPIPED_SS*, *CPIPED_CC*, respectively for sample rate, sample size and capture channel directly
-- **A2P_CP_SOUNDCARD:** audio input soundcard to be passed to cpiped in *hw:\<card>,\<device>* format
-- **A2P_CP_SL:** cpiped silence level
-- **A2P_OT_LIB:** OwnTone library folder. Where the audio pipe will be created and filled on sound detection
-- **A2P_OT_HOST:** OwnTOne server hostname. Default *localhost*
-- **A2P_OT_OUT_LIST:** OwnTone output(s) label to be selected at sound detect
-- **A2P_DEBUG:** make log more verbose. Accepts True or False values
-
-#### *Not recommended*
-- **A2P_DEVFORMAT** : Concatenation of sample format and sample frequency separated by two underscores  
-  Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000  
-  Default sample rate *41000Hz*  
-  Default sample size *16bit*  
-  Default capture channel *2*  
-  **Preferred** approach is to read cpiped env variables *CPIPED_SR*, *CPIPED_SS*, *CPIPED_CC*, respectively for sample rate, sample size and capture channel directly
-
-## Dependencies
-- Bash
-- Python
-- [CPiped ale275 fork](https://github.com/ale275/cpiped)
+<table>
+  <tr>
+    <th>Variable<br>name</th>
+    <th>Description</th>
+    <th>Type</th>
+    <th>Default</th>
+    <th>Range/Format</th>
+    <th>Required?</th>
+  </tr>
+  <tr>
+    <!-- Var name -->
+    <td><code>A2P_DEVFORMAT</code></td>
+    <!-- Description -->
+    <td>
+      Concatenation of sample format and sample frequency separated by two underscores<br> 
+      Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000<br> 
+      Default sample rate <i>41000Hz</i><br>
+      Default sample size <i>16bit</i><br>
+      Default capture channel <i>2</i><br>
+      **Preferred** approach is to read <code>cpiped</code> env variables <i>CPIPED_SR</i>, <i>CPIPED_SS</i>, <i>CPIPED_CC</i>, respectively for sample rate, sample size and capture channel directly
+    </td>
+    <!-- Type -->
+    <td><code>string</code></td>
+    <!-- Default -->
+    <td></td>
+    <!-- Range/Format -->
+    <td><code>&lt;Sample format&gt;__&lt;Sample rate&gt;</code></td>
+    <!-- Required? -->
+    <td>Not recomended</td>
+  </tr>
+</table>
 
 ## ToDo(s)
-- [ ] Move ENV variable setup from Service file to EnvironFile to define monitoring pipe in pre stage
+- [ ] Sysvinit scripts
+- [ ] Move ENV variable setup from Service file to EnvironFile to define monitoring pipe in pre stage. Under evaluation
 - [ ] Rework detect pipe section that is prone to config error
 - [ ] Create install script
 - [ ] Add command line parameters to A2POutputselector.py
 - [ ] Change detect pipe extension from .pipe to .detectpipe
-- [ ] Improve systemd service ExecStop section of script to stop the device specific instance of cpiped and not all of them
-- [ ] Fix systemd service KillMode warning
+- [x] Improve systemd service ExecStop section of script to stop the device specific instance of cpiped and not all of them
+- [x] Fix systemd service KillMode warning
 
-## Credits
+See the [open issues](https://github.com/ale275/audio2pipe/issues) for a full list of proposed features (and known issues).
+
+## Acknowledgments
 
 Based on [Making an Analog In to Airplay RPi-Transmitter](https://github.com/owntone/owntone-server/wiki/Making-an-Analog-In-to-Airplay-RPi-Transmitter) from ownTone wiki
 
 Created to be used with [OwnTone](https://owntone.github.io/owntone-server/)
 
-[CPiped original](https://github.com/b-fitzpatrick/cpiped)
+### Top contributors:
+
+<a href="https://github.com/ale275/audio2pipe/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ale275/audio2pipe" alt="contrib.rocks image" />
+</a>
+
+<!-- variables -->
+[build-shield]: https://github.com/ale275/audio2pipe/actions/workflows/audio2pipe-build.yml/badge.svg
+[commit-shield]: https://img.shields.io/github/commit-activity/t/ale275/audio2pipe?style=flat
+[release-shield]: https://img.shields.io/github/release/ale275/audio2pipe.svg?colorB=58839b
+[release-url]: https://github.com/ale275/audio2pipe/releases/latest
+[contributors-shield]: https://img.shields.io/github/contributors/ale275/audio2pipe.svg
+[contributors-url]: https://github.com/ale275/audio2pipe/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/ale275/audio2pipe.svg?style=flat
+[forks-url]: https://github.com/ale275/audio2pipe/network/members
+[stars-shield]: https://img.shields.io/github/stars/ale275/audio2pipe.svg?style=flat
+[stars-url]: https://github.com/ale275/audio2pipe/stargazers
+[issues-shield]: https://img.shields.io/github/issues/ale275/audio2pipe.svg
+[issues-url]: https://github.com/ale275/audio2pipe/issues
+[license-shield]: https://img.shields.io/github/license/ale275/audio2pipe.svg
+[license-url]: https://github.com/ale275/audio2pipe/blob/master/LICENSE
