@@ -157,7 +157,7 @@ Script configuration are mainly managed though ENV variables
         <li>Audio pipe: <i>&lt;A2P_OT_LIB&gt;/&lt;A2P_DEVNAME&gt;</i></li>
         <li>Audio pipe filling PID file: <i>var/run/A2P_&lt;A2P_DEVNAME&gt;.pid</i></li>
         <li><code>cpiped</code> PID file: <i>var/run/A2P_&lt;A2P_DEVNAME&gt;.pid</i></li>
-        <li>Detect pipe: <i>var/pipes/A2P_&lt;A2P_DEVNAME&gt;.pipe</i></li>
+        <li>Detect pipe: <i>var/pipes/A2P_&lt;A2P_DEVNAME&gt;.detectpipe</i></li>
         <li>Lockfile file: <i>var/run/A2P_&lt;A2P_DEVNAME&gt;.lock.&lt;A2P_ExecPhase&gt;</i></li>
         <li>systemd service file: <i>cpiped_&lt;A2P_DEVNAME&gt;.service</i></li>
       </ul>
@@ -314,7 +314,7 @@ Usage of following variable is **not recommended**
 - [ ] Rework detect pipe section that is prone to config error
 - [ ] Create install script
 - [ ] Add command line parameters to A2POutputselector.py
-- [ ] Change detect pipe extension from .pipe to .detectpipe
+- [x] Change detect pipe extension from .pipe to .detectpipe
 - [ ] Add cpiped existence check in <A2P_ExecPhase>==Pre
 - [x] Improve systemd service ExecStop section of script to stop the device specific instance of cpiped and not all of them
 - [x] Fix systemd service KillMode warning

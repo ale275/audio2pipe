@@ -1,9 +1,9 @@
 #!/bin/bash
 
-errcho(){ >&2 echo $@; }
+errcho(){ >&2 echo "$@"; }
 
 _scriptHome=${A2P_HOME:-$HOME}
-_scriptName=$(basename $0)
+_scriptName=$(basename "$0")
 
 _mode=
 _deviceName=${A2P_DEVNAME}
@@ -43,15 +43,15 @@ while getopts 'd:f:l:m:hs:' opt; do
       _scriptHome="$OPTARG"
       ;;
 
-    *|?|h)
-      echo "Usage: $(basename $0) [-d arg] [-l arg] [-m arg] [-s arg]"
+    h|?|*)
+      echo "Usage: ${_scriptName} [-d arg] [-l arg] [-m arg] [-s arg]"
       echo "---------------------------------------------------------"
       echo "    -d  <DEVICE NAME [STR]> Set name of connected device to the pipe. Will create all the mnemonics"
       echo "        It overrides the ENV variable A2P_DEVNAME"
-      echo "        Audio pipe:         <DEVICE NAME>                   Audio pipe seen by OwnTone"
-      echo "        Detect pipe:        A2P_DETECT_<DEVICE NAME>.pipe   Audio detection pipe used by CPIPED"
-      echo "        Cat proc pid:       A2P_<DEVICE NAME>.pid           File storing the redirection process id"
-      echo "        OwnTone Out Sel:    A2P_OT_OUT_SEL_<DEVICE NAME>    Script automatically sourced before audio redirection, useful to set per device OwnTone outputs"
+      echo "        Audio pipe:         <DEVICE NAME>                           Audio pipe seen by OwnTone"
+      echo "        Detect pipe:        A2P_DETECT_<DEVICE NAME>.detectpipe     Audio detection pipe used by CPIPED"
+      echo "        Cat proc pid:       A2P_<DEVICE NAME>.pid                   File storing the redirection process id"
+      echo "        OwnTone Out Sel:    A2P_OT_OUT_SEL_<DEVICE NAME>            Script automatically sourced before audio redirection, useful to set per device OwnTone outputs"
       echo "    -f  <DEVICE FORMAT [STR]> Concatenation of sample format and sample frequency separated by two underscores"
       echo "        Example: sample format 16bit Little Endian and sample frequency 48kHz will be S16_LE__48000"
       echo "        It overrides the ENV variable A2P_DEVFORMAT and CPIPED_SR, CPIPED_SS, CPIPED_CC defined by cpiped"
@@ -80,7 +80,7 @@ while getopts 'd:f:l:m:hs:' opt; do
       ;;
   esac
 done
-shift "$(($OPTIND -1))"
+shift "$((OPTIND -1))"
 
 # Variables validation
 
@@ -108,12 +108,12 @@ if [[ "${_mode}" != "PRE" && "${_mode}" != "STOP" ]]; then
     # * _deviceFormat ----
     if [[ "-${_deviceFormat}-" != "--" ]]; then
         echo "Device format: ${_deviceFormat}"
-        _deviceSampleFormat=$(echo ${_deviceFormat} | grep -oP '((?<=^S)[0-9]{1,2}(?=_LE))')
+        _deviceSampleFormat=$(echo "${_deviceFormat}" | grep -oP '((?<=^S)[0-9]{1,2}(?=_LE))')
         if [[ $? -ne 0 ]]; then
             errcho "Unknown sample format"
             exit 100
         fi
-        _deviceSampleFrequency=$(echo ${_deviceFormat} | grep -oP '((?<=__)[0-9]{1,6}$)')
+        _deviceSampleFrequency=$(echo "${_deviceFormat}" | grep -oP '((?<=__)[0-9]{1,6}$)')
         if [[ $? -ne 0 ]]; then
             errcho "Unknown sample frequency"
             exit 100
@@ -145,11 +145,11 @@ fi
 
 # * _scriptHome ----
 # remove eventual trailing slash
-_scriptHome=$( echo ${_scriptHome} | sed 's/\/$//' )
+_scriptHome=$( echo "${_scriptHome}" | sed 's/\/$//' )
 
 # * _owntoneLibPath ----
 # remove eventual trailing slash
-_owntoneLibPath=$( echo ${_owntoneLibPath} | sed 's/\/$//' )
+_owntoneLibPath=$( echo "${_owntoneLibPath}" | sed 's/\/$//' )
 if [[ "-${_owntoneLibPath}-" == "--" ]]; then
     errcho "OwnTone lib cannot be null"
     exit 100
@@ -165,7 +165,7 @@ echo "Executing A2P script for device '${_deviceName}' in mode '${_mode}'"
 # Child variables init
 _audioPipeName="${_deviceName}"
 _detectPipeDir="${_scriptHome}/var/pipes"
-_detectPipeName="A2P_DETECT_${_deviceName}.pipe"
+_detectPipeName="A2P_DETECT_${_deviceName}.detectpipe"
 _outSelScript="${_scriptHome}/bin/A2P_OT_OUT_SEL_${_deviceName}"
 _lockFileName="A2P_${_deviceName}.lock"
 _pidDir="${_scriptHome}/var/run"
