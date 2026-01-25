@@ -14,6 +14,7 @@
 `audio2pipe` is a set of scripts and services to better handle pipe creation for audio streamers leveraging [cpiped](https://github.com/ale275/cpiped) under the hood. Recommended in conjunction with [OwnTone](https://owntone.github.io/owntone-server/)
 
 ## Contents
+
 - [Contents](#contents)
 - [Features](#features)
 - [Getting Started](#getting-started)
@@ -22,12 +23,14 @@
 - [Usage](#usage)
   - [scripts/A2PSourceProcess.sh](#scriptsa2psourceprocesssh)
   - [scripts/A2POutputselector.py](#scriptsa2poutputselectorpy)
+  - [service/cpiped\_Template.service](#servicecpiped_templateservice)
   - [Configuration](#configuration)
 - [ToDo(s)](#todos)
 - [Acknowledgments](#acknowledgments)
   - [Top contributors:](#top-contributors)
 
 ## Features
+
 - systemd service to manage cpiped instances supporting different sample rates
 - Multiple input device supported with dedicated configuration
 - Interlock to avoid out of sequence triggering of per device script
@@ -36,6 +39,7 @@
 ## Getting Started
 
 ### Prerequisites
+
 `audio2pipe` requires 
 - bash
 - [cpiped](https://github.com/ale275/cpiped)
@@ -43,6 +47,7 @@
   - requests 2.28.1
 
 ### Installation
+
 1. Clone the repository
    ```sh
    git clone https://github.com/ale275/audio2pipe.git
@@ -58,11 +63,30 @@
    ln -s "${A2P_HOME}/bin/A2PSourceProcess.sh" "${A2P_HOME}/bin/A2PSourceProcessStop"
    ```
 
+   To configure autmatic output selection on sound detect please refer to [scripts/A2POutputselector.py](#scriptsa2poutputselectorpy) section.
+3. Create per device systemd service file starting from template. More details in [configuration](#configuration) section
+   ```sh
+   export A2P_HOME=/home/user
+   export A2P_DEVNAME=Test_Device
+   cp "service/cpiped_Template.service" "service/cpiped_${A2P_DEVNAME}.service"
+   nano "service/cpiped_${A2P_DEVNAME}.service"
+   ```
+4. Install and activate the service
+   ```sh
+   export A2P_HOME=/home/user
+   export A2P_DEVNAME=Test_Device
+   sudo cp "service/cpiped_${A2P_DEVNAME}.service" "/lib/systemd/system/"
+   sudo systemctl daemon-reload
+   sudo systemctl enable cpiped_${A2P_DEVNAME}.service
+   sudo systemctl start cpiped_${A2P_DEVNAME}
+   ```
+
 ## Usage
 
 `audio2pipe` scripts functionality description
 
 ### scripts/A2PSourceProcess.sh
+
 Main bash script taking various ENV variable as [configuration](#configuration) to make, monitor and clean-up audio pipes, pid monitoring and output selection via callback function.
 
 Script has three execution phases from now on <A2P_ExecPhase>
@@ -75,6 +99,7 @@ Lockfile and pipe filling PID checks prevent parallel command execution and mult
 On **sound detect** a python callback script is used, in the repository an OwnTone output selection script is provided.
 
 ### scripts/A2POutputselector.py
+
 Python script using [OwnTone http API(s)](https://owntone.github.io/owntone-server/json-api/) to select the output(s) defined in ENV variable at *sound detect* phase. It's usage is not mandatory
 
 To be invoked script must be located in `<A2P_HOME>/bin` and named `A2P_OT_OUT_SEL_<A2P_DEVNAME>`
@@ -84,7 +109,12 @@ export A2P_DEVNAME=Test_Device
 ln -s "${A2P_HOME}/bin/A2POutputSelector.py" "${A2P_HOME}/bin/A2P_OT_OUT_SEL_${A2P_DEVNAME}"
 ```
 
+### service/cpiped_Template.service
+
+Systemd service 
+
 ### Configuration
+
 Script configuration are mainly managed though ENV variables
 
 <table>
@@ -278,12 +308,14 @@ Usage of following variable is **not recommended**
 </table>
 
 ## ToDo(s)
+
 - [ ] Sysvinit scripts
 - [ ] Move ENV variable setup from Service file to EnvironFile to define monitoring pipe in pre stage. Under evaluation
 - [ ] Rework detect pipe section that is prone to config error
 - [ ] Create install script
 - [ ] Add command line parameters to A2POutputselector.py
 - [ ] Change detect pipe extension from .pipe to .detectpipe
+- [ ] Add cpiped existence check in <A2P_ExecPhase>==Pre
 - [x] Improve systemd service ExecStop section of script to stop the device specific instance of cpiped and not all of them
 - [x] Fix systemd service KillMode warning
 

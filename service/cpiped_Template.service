@@ -1,0 +1,34 @@
+[Unit]
+Description=cpiped for <Name of your device here>
+After=sound.target
+
+[Service]
+Type=forking
+KillMode=control-group
+# User running the service
+User=
+# audio2pipe - env config variables for more info https://github.com/ale275/audio2pipe?tab=readme-ov-file#configuration
+# audio2pipe - basedir
+Environment="A2P_HOME="
+# audio2pipe - device name without spaces
+Environment="A2P_DEVNAME="
+# audio2pipe - cpiped input sample rate in Hz
+Environment="A2P_CP_SF="
+# audio2pipe - cpiped input soundcard in alsa format hw:<card>,<device>
+Environment="A2P_CP_SOUNDCARD="
+# audio2pipe - cpiped silence level
+Environment="A2P_CP_SL="
+# audio2pipe - owntone library folder
+Environment="A2P_OT_LIB="
+# audio2pipe - owntone hostname (default localhost)
+Environment="A2P_OT_HOST="
+# audio2pipe - owntone output name(s) (comma separated list e.g. 'Speaker1,Speaker 2,Speaker3'
+Environment="A2P_OT_OUT_LIST="
+
+ExecStartPre=/bin/bash -c '${A2P_HOME}/bin/A2PSourceProcessPre'
+ExecStart=cpiped -d "${A2P_CP_SOUNDCARD}" -s ${A2P_HOME}/bin/A2PSourceProcessDetect -e ${A2P_HOME}/bin/A2PSourceProcessSilence -t $A2P_CP_SL -p ${A2P_HOME}/var/run/cpiped_${A2P_DEVNAME}.pid -D ${A2P_HOME}/var/pipes/A2P_DETECT_${A2P_DEVNAME}.pipe
+ExecStop=/bin/bash -c '${A2P_HOME}/bin/A2PSourceProcessStop'
+
+
+[Install]
+WantedBy=multi-user.target
