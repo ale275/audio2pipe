@@ -72,8 +72,17 @@ Script has three execution phases from now on <A2P_ExecPhase>
 
 Lockfile and pipe filling PID checks prevent parallel command execution and multiple pipe fillings resulting in unpleasant white noise blasting from speakers. These features are especially useful when audio is sourced from record players.
 
+On **sound detect** a python callback script is used, in the repository an OwnTone output selection script is provided.
+
 ### scripts/A2POutputselector.py
 Python script using [OwnTone http API(s)](https://owntone.github.io/owntone-server/json-api/) to select the output(s) defined in ENV variable at *sound detect* phase. It's usage is not mandatory
+
+To be invoked script must be located in `<A2P_HOME>/bin` and named `A2P_OT_OUT_SEL_<A2P_DEVNAME>`
+```sh
+export A2P_HOME=/home/user
+export A2P_DEVNAME=Test_Device
+ln -s "${A2P_HOME}/bin/A2POutputSelector.py" "${A2P_HOME}/bin/A2P_OT_OUT_SEL_${A2P_DEVNAME}"
+```
 
 ### Configuration
 Script configuration are mainly managed though ENV variables
