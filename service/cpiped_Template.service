@@ -26,7 +26,7 @@ Environment="A2P_OT_HOST="
 Environment="A2P_OT_OUT_LIST="
 
 ExecStartPre=/bin/bash -c '${A2P_HOME}/bin/A2PSourceProcessPre'
-ExecStart=cpiped -d "${A2P_CP_SOUNDCARD}" -s ${A2P_HOME}/bin/A2PSourceProcessDetect -e ${A2P_HOME}/bin/A2PSourceProcessSilence -t $A2P_CP_SL -p ${A2P_HOME}/var/run/cpiped_${A2P_DEVNAME}.pid -D ${A2P_HOME}/var/pipes/A2P_DETECT_${A2P_DEVNAME}.detectpipe
+ExecStart=cpiped -d "${A2P_CP_SOUNDCARD}" -f ${A2P_CP_SF} -t ${A2P_CP_SL} -s ${A2P_HOME}/bin/A2PSourceProcessDetect -e ${A2P_HOME}/bin/A2PSourceProcessSilence -p ${A2P_HOME}/var/run/cpiped_${A2P_DEVNAME}.pid -D ${A2P_HOME}/var/pipes/A2P_DETECT_${A2P_DEVNAME}.detectpipe
 ExecStop=/bin/bash -c '${A2P_HOME}/bin/A2PSourceProcessStop'
 
 
