@@ -1,6 +1,6 @@
 <h1>audio2pipe</h1>
 
-<!-- [![Release][release-shield]][release-url] -->
+[![Release][release-shield]][release-url]
 ![GitHub commit activity][commit-shield]
 [![Issues][issues-shield]][issues-url]
 [![Contributors][contributors-shield]][contributors-url]
@@ -359,5 +359,5 @@ Created to be used with [OwnTone](https://owntone.github.io/owntone-server/)
 [issues-url]: https://github.com/ale275/audio2pipe/issues
 [license-shield]: https://img.shields.io/github/license/ale275/audio2pipe.svg
 [license-url]: https://github.com/ale275/audio2pipe/blob/master/LICENSE
-[bash-shield]: https://img.shields.io/badge/bash-1f425f?style=flat&logo=gnubash
+[bash-shield]: https://img.shields.io/badge/bash-1f425f?style=flat&logo=gnubash&logoColor=white
 [python-shield]: https://img.shields.io/badge/python-1f425f?style=flat&logo=python
